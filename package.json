@@ -1,0 +1,11 @@
+{
+  "name": "finance-tracker-localhost",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/thisispalash/finance-tracker-localhost.git",
+  "author": "Palash A. <palash.agarwal.96@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "tailwindcss": "^3.4.7"
+  }
+}
