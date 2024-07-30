@@ -2,3 +2,5 @@
 @tailwind components;
 @tailwind utilities;
 @tailwind variants;
+
+/* Run using "npx tailwindcss -i ./static/css/tailwind.css -o ./static/css/base.css --watch" */
