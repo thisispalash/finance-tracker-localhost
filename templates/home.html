@@ -6,13 +6,19 @@
 {% endblock %}
 
 
-{% block body %}
+{% block header %}
+  <h2 class="">
+    Personal Expenses Tracker
+  </h2>
+{% endblock header %}
 
-  <div class="bg-red-200">
 
-    <p class="text-center mt-5">Welcome to Expense Tracker</p>
+{% block content %}
 
+  <div class="p-2">
+    {% from "components/macros/buttons/upload-receipt.html" import upload_receipt_button %}
+    {{ upload_receipt_button() }}
   </div>
 
 
-{% endblock %}
+{% endblock content %}
