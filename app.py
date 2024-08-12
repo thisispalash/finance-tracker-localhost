@@ -1,4 +1,4 @@
-from flask import Flask, render_template, g
+from flask import Flask, render_template, g, send_from_directory
 from blueprints import *
 
 app = Flask(__name__)
@@ -16,13 +16,9 @@ def close_connection(exception):
 def home():
   return render_template('home.html')
 
-@app.route('/data')
-def data():
-  return render_template('data.html')
-
-@app.route('/upload-receipt')
-def upload_receipt():
-  return render_template('upload_receipt.html')
+@app.route('/data/<path:path>')
+def data(path):
+  return send_from_directory('data', path)
 
 
 if __name__ == '__main__':

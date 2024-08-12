@@ -5,22 +5,25 @@
   function uploadReceipt(input) {
 
     const file = input.files[0];
-    console.log(input);
-    console.log(file);
 
     const formData = new FormData();
     formData.append('receipt', file);
 
     fetch('/files/receipt', {
-      method: 'POST',
+      method: 'PUT',
       body: formData
     }).then(response => {
       if (response.ok) {
         console.log('File uploaded successfully');
+        return response.url;
       } else {
         console.error('File upload failed');
       }
-    }).catch(error => {
+    }).then(url => {
+      console.log(url);
+      window.location.href = url;
+    }).
+    catch(error => {
       console.error('Error uploading file:', error);
     });
   }

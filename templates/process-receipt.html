@@ -1,0 +1,182 @@
+{% extends "base.html" %}
+
+{% block title %}Receipt{% endblock %}
+{% block head %}
+  {{ super() }}
+  <script src="https://unpkg.com/fabric@5.4.0/dist/fabric.min.js"></script>
+
+  <script>
+    /** remove chat sidebar from the page */
+    document.addEventListener('DOMContentLoaded', () => {
+      const chat = document.getElementById('chat');
+      if (chat) {
+        chat.classList.add('hidden');
+      }
+
+      const content = document.getElementById('content');
+      if (content) {
+        content.classList.remove('w-4/5');
+        content.classList.add('w-full');
+      }
+    });
+  </script>
+{% endblock %}
+
+{% block header %}
+  <h2 class="">
+    {{ receipt_name }}
+  </h2>
+{% endblock header %}
+
+{% block content %}
+
+  <div class="p-2">
+    <!-- <h2 class="p-4 text-center">Add boxes for items and prices</h2> -->
+    <div class="text-center p-4 mb-4 flex flex-row gap-6">
+      <button id="add-items" class="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-700">Add Items</button>
+      <button id="add-prices" class="bg-green-500 text-white p-2 rounded-lg hover:bg-green-700">Add Prices</button>
+      <div class="flex-grow"></div>
+      <button id="submit" class="bg-slate-500 text-white p-2 rounded-lg hover:bg-slate-700">Submit</button>
+    </div>
+    <div id="cropped" class="p-4 grid grid-cols-2 gap-4"></div>
+    <div class="flex justify-center p-4">
+      <canvas id="receipt" width="1" height="1" class="p-2 border border-slate-200 rounded-lg"></canvas>
+    </div>
+  </div>
+
+  <script>
+    const canvas = new fabric.Canvas('receipt');
+    let currentBox = ''; // items or prices
+    let boxCounter = 0;
+
+    // display image
+    fabric.Image.fromURL(`/data/receipts/{{ receipt_name }}/receipt.{{ extension }}`, img => {
+      canvas.setWidth(img.width);
+      canvas.setHeight(img.height);
+      img.set({ selectable: false, evented: false });
+      canvas.add(img);
+      canvas.centerObject(img);
+      canvas.renderAll();
+    });
+
+    document.getElementById('add-items').addEventListener('click', () => {
+      currentBox = 'items';
+    });
+
+    document.getElementById('add-prices').addEventListener('click', () => {
+      currentBox = 'prices';
+    });
+
+    // actual drawing
+    let isDrawing = false;
+    let rect, origX, origY;
+
+    canvas.on('mouse:down', o => {
+      if (currentBox === '') return;
+      isDrawing = true;
+      const pointer = canvas.getPointer(o.e);
+      origX = pointer.x;
+      origY = pointer.y;
+      rect = new fabric.Rect({
+        left: origX,
+        top: origY,
+        fill: currentBox === 'items'? 'rgba(0,0,255,0.3)' : 'rgba(0,255,0,0.3)',
+        stroke: currentBox === 'items'? 'blue' : 'green',
+        strokeWidth: 2,
+        transparentCorners: false
+      });
+      canvas.add(rect);
+    });
+
+    canvas.on('mouse:move', o => {
+      if (!isDrawing) return;
+      
+      const pointer = canvas.getPointer(o.e);
+      
+      if (origX > pointer.x) {
+        rect.set({ left: Math.abs(pointer.x) });
+      }
+      
+      if (origY > pointer.y) {
+        rect.set({ top: Math.abs(pointer.y) });
+      }
+      
+      rect.set({ width: Math.abs(origX - pointer.x) });
+      rect.set({ height: Math.abs(origY - pointer.y) });
+      
+      canvas.renderAll();
+    });
+
+    canvas.on('mouse:up', () => {
+      isDrawing = false;
+
+      const cropId = `crop_${boxCounter++}`;
+      const croppedCanvas = document.createElement('canvas');
+      croppedCanvas.width = rect.width;
+      croppedCanvas.height = rect.height;
+
+      const ctx = croppedCanvas.getContext('2d');
+      ctx.drawImage(
+        canvas.getObjects('image')[0].getElement(), // Original image element
+        rect.left, // Source x
+        rect.top, // Source y
+        rect.width, // Source width
+        rect.height, // Source height
+        0, // Destination x
+        0, // Destination y
+        rect.width, // Destination width
+        rect.height // Destination height
+      );
+
+      const croppedImg = new Image();
+      croppedImg.src = croppedCanvas.toDataURL(`image/${{ extension }}`);
+      croppedImg.classList.add('border', 'rounded-lg');
+      croppedImg.classList.add(currentBox === 'items'? 'border-blue-500' : 'border-green-500');
+      croppedImg.id = cropId;
+
+      document.getElementById('cropped').appendChild(croppedImg);
+
+      currentBox = '';
+    });
+
+
+    // submitting
+    document.getElementById('submit').addEventListener('click', () => {
+
+      const rects = canvas.getObjects('rect').map((r, i) => {
+
+        const cropId = `crop_${i}`;
+        const croppedCanvas = document.getElementById(cropId);
+
+        return {
+          boxType: r.stroke === 'blue'? 'items' : 'prices',
+          b64Image: croppedCanvas.src,
+        };
+      });
+
+      fetch('/files/receipt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          receipt_name: '{{ receipt_name }}',
+          // extension: '{{ extension }}',
+          boxes: rects
+        })
+      }).then(response => {
+        console.log(response);
+        if (response.ok) {
+          console.log('Boxes added successfully');
+        } else {
+          console.error('Failed to add boxes');
+        }
+      }).catch(error => {
+        console.error('Error adding boxes:', error);
+      });
+
+    });
+
+  </script>
+
+{% endblock content %}
