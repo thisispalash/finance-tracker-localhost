@@ -8,7 +8,7 @@ The project is under slow development since it is a part time effort. Moreover, 
 ### Demo (current as of 2024-08-12)
 > plz no judge ui, ty
 
-
+https://github.com/user-attachments/assets/609a001e-574f-42ac-92d3-5799fe2523a1
 
 ## Motivation
 
