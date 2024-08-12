@@ -8,6 +8,8 @@ from pprint import pprint
 from flask import Blueprint, request, flash
 from flask import redirect, url_for, render_template, jsonify
 
+from blueprints.db import add_receipt, add_receipt_item
+
 files_bp = Blueprint('files', __name__)
 BUFFER_SIZE = 65536 # 64KB
 md5 = hashlib.md5()
@@ -76,8 +78,25 @@ def process_boxes():
 def save_to_db():
   data = request.form
   pprint(data, indent=2)
+
+  hash = data['receipt_name']
+  store = data['store']
+  date = data['date']
+  time = data['time']
+  count = int(data['count'])
+  total = data['total']
   
-  flash('Data received by server!') # doesnt work for some reason
+  receipt_id = add_receipt(hash, store, date, time, count, total)
   
-  # save to db
+  for key in data.keys():
+    if key.startswith('item_'):
+      idx = key.split('_')[-1]
+      item = data[f'item_{idx}']
+      price = data[f'price_{idx}']
+      
+      if item and price:
+        add_receipt_item(receipt_id, item, price)
+  
+  flash('Saved to DB!')
+  
   return { 'message': 'Saved to DB' }, 200

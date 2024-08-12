@@ -317,6 +317,15 @@
       const formData = new FormData(form);
 
       formData.append('receipt_name', '{{ receipt_name }}');
+      let count = 0;
+
+      for(let [key, value] of formData.entries()) {
+        if (key.startsWith('item_')) {
+          count++;
+        }
+      }
+
+      formData.append('count', count);
 
       fetch('/files/receipt', {
         method: 'PATCH',

@@ -1,5 +1,6 @@
 from flask import Flask, render_template, g, send_from_directory
 from blueprints import *
+from blueprints.db import setup, close_connection
 
 app = Flask(__name__)
 
@@ -8,14 +9,16 @@ app.register_blueprint(files_bp, url_prefix='/files')
 
 app.secret_key = 'my-very-important-secret'
 
+# initialize the database
+setup(app)
+
 @app.teardown_appcontext
-def close_connection(exception):
-  db = getattr(g, '_database', None)
-  if db is not None:
-    db.close()
+def shutdown_db(exception):
+  close_connection(exception)
 
 @app.route('/')
 def home():
+  setup()
   return render_template('home.html')
 
 @app.route('/data/<path:path>')
