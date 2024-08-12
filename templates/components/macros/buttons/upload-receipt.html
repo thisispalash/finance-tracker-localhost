@@ -1,0 +1,40 @@
+
+{% macro upload_receipt_button() %}
+
+<script>
+  function uploadReceipt(input) {
+
+    const file = input.files[0];
+
+    const formData = new FormData();
+    formData.append('receipt', file);
+
+    fetch('/files/receipt', {
+      method: 'PUT',
+      body: formData
+    }).then(response => {
+      if (response.ok) {
+        console.log('File uploaded successfully');
+        return response.url;
+      } else {
+        console.error('File upload failed');
+      }
+    }).then(url => {
+      console.log(url);
+      window.location.href = url;
+    }).
+    catch(error => {
+      console.error('Error uploading file:', error);
+    });
+  }
+</script>
+
+<!-- html -->
+<button 
+  onclick="document.getElementById('receipt').click()"
+  class="bg-slate-200 p-2 rounded-lg hover:bg-slate-400"
+>
+  Upload Receipt
+</button>
+<input type="file" id="receipt" name="receipt" accept="image/*" class="hidden" onchange="uploadReceipt(this)">
+{% endmacro %}

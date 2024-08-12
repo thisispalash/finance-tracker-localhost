@@ -16,9 +16,31 @@
     {% endblock %}
   </head>
 
-  <body>
-    {% block body %}
-    {% endblock %}
+  <body class="h-screen">
+
+    <div class="w-full text-center p-2 bg-slate-300">
+      {% block header %}
+      {% endblock %}
+    </div>
+
+    <div class="container mx-auto">
+
+
+      <div class="flex flex-row p-0 m-0">
+        
+        <div id="content" class="w-4/5">
+          {% block content %}
+          {% endblock %}
+        </div>
+
+        <div id="chat" class="w-1/5 border-l-2 border-slate-200 p-4 h-full">
+          {% include "components/chat.html" %}
+        </div>
+
+      </div>
+
+    </div>
+
   </body>
 
 </html>

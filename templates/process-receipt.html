@@ -1,0 +1,348 @@
+{% extends "base.html" %}
+
+{% block title %}Receipt{% endblock %}
+{% block head %}
+  {{ super() }}
+  <script src="https://unpkg.com/fabric@5.4.0/dist/fabric.min.js"></script>
+
+  <script>
+    /** remove chat sidebar from the page */
+    document.addEventListener('DOMContentLoaded', () => {
+      const chat = document.getElementById('chat');
+      if (chat) {
+        chat.classList.add('hidden');
+      }
+
+      const content = document.getElementById('content');
+      if (content) {
+        content.classList.remove('w-4/5');
+        content.classList.add('w-full');
+      }
+    });
+  </script>
+
+  <script>
+
+    function calcTotal() {
+      const totalInput = document.getElementById('total');
+      const prices = document.querySelectorAll('input[name^="price_"]');
+      let total = 0;
+      for(let price of prices) {
+        total += parseFloat(price.value) || 0;
+      }
+      totalInput.value = total.toFixed(2);
+    }
+
+    function displayForm(data) {
+      document.getElementById('hide-image').click(); // hide big image
+      console.log(data);
+
+      const formContainer = document.getElementById('form-container');
+      formContainer.classList.remove('hidden');
+      formContainer.innerHTML = '';
+      
+      const { items, prices, count } = data;
+
+      const form = document.createElement('form');
+      form.classList.add('p-4', 'border', 'border-slate-200', 'rounded-lg', 'flex', 'flex-col', 'gap-4');
+      form.id = 'receipt-form';
+
+      const storeInput = document.createElement('input');
+      storeInput.type = 'text';
+      storeInput.name = 'store';
+      storeInput.placeholder = 'Store';
+
+      const datetimeDiv = document.createElement('div');
+      datetimeDiv.classList.add('grid', 'grid-cols-2', 'gap-4');
+
+      const dateInput = document.createElement('input');
+      dateInput.type = 'date';
+      dateInput.name = 'date';
+      dateInput.placeholder = 'Date';
+
+      const timeInput = document.createElement('input');
+      timeInput.type = 'time';
+      timeInput.name = 'time';
+      timeInput.placeholder = 'Time';
+
+      datetimeDiv.appendChild(dateInput);
+      datetimeDiv.appendChild(timeInput);
+
+      form.appendChild(storeInput);
+      form.appendChild(datetimeDiv);
+
+      const hr = document.createElement('hr');
+      form.appendChild(hr);
+
+      for(let i=0; i<count; i++) {
+
+        const itemsDiv = document.createElement('div');
+        itemsDiv.classList.add('grid', 'grid-cols-4', 'gap-4', 'items-center');
+        itemsDiv.id = `line_${i}`;
+
+        const numberP = document.createElement('p');
+        numberP.textContent = i + 1;
+        itemsDiv.appendChild(numberP);
+
+        const itemInput = document.createElement('input');
+        itemInput.type = 'text';
+        itemInput.name = `item_${i}`;
+        itemInput.placeholder = 'Item';
+        itemInput.classList.add('p-2', 'border', 'border-slate-200', 'rounded-lg');
+        itemInput.value = items[i] || '';
+        itemsDiv.appendChild(itemInput);
+
+        const priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.name = `price_${i}`;
+        priceInput.placeholder = 'Price';
+        priceInput.classList.add('p-2', 'border', 'border-slate-200', 'rounded-lg');
+        priceInput.value = prices[i] || '';
+        priceInput.addEventListener('input', calcTotal);
+        itemsDiv.appendChild(priceInput);
+
+        const deleteButton = document.createElement('button');
+        deleteButton.textContent = 'Remove';
+        deleteButton.classList.add('bg-red-500', 'text-white', 'p-2', 'rounded-lg', 'hover:bg-red-700');
+        deleteButton.addEventListener('click', () => {
+          itemsDiv.remove();
+          calcTotal();
+        });
+        itemsDiv.appendChild(deleteButton);
+
+        form.appendChild(itemsDiv);
+
+      }
+
+      const totalDiv = document.createElement('div');
+      totalDiv.classList.add('grid', 'grid-cols-2', 'gap-4', 'items-center');
+
+      const totalLabel = document.createElement('p');
+      totalLabel.textContent = 'Total';
+      totalDiv.appendChild(totalLabel);
+
+      const totalInput = document.createElement('input');
+      totalInput.type = 'number';
+      totalInput.name = 'total';
+      totalInput.placeholder = 'Total';
+      totalInput.id = 'total';
+      totalInput.classList.add('p-2', 'border', 'border-slate-200', 'rounded-lg');
+      totalInput.readOnly = true;
+      totalDiv.appendChild(totalInput);
+
+      form.appendChild(totalDiv);
+
+      formContainer.appendChild(form);
+      document.getElementById('save-data').classList.remove('hidden');
+    }
+
+  </script>
+{% endblock %}
+
+{% block header %}
+  <h2 class="">
+    {{ receipt_name }}
+  </h2>
+{% endblock header %}
+
+{% block content %}
+
+  <div class="p-2 mb-8">
+    <!-- <h2 class="p-4 text-center">Add boxes for items and prices</h2> -->
+    <div class="text-center p-4 mb-4 flex flex-row gap-6">
+      <button id="add-items" class="bg-blue-500 text-white p-2 rounded-lg hover:bg-blue-700">Crop Items</button>
+      <button id="add-prices" class="bg-green-500 text-white p-2 rounded-lg hover:bg-green-700">Crop Prices</button>
+      <div class="flex-grow"></div>
+      <button id="submit" class="bg-slate-500 text-white p-2 rounded-lg hover:bg-slate-700">Process boxes</button>
+    </div>
+    <div id="cropped" class="p-4 grid grid-cols-2 gap-4"></div>
+    <div class="flex flex-col gap-2 justify-center p-4">
+      <button id="hide-image" class="w-1/6 bg-slate-500 text-white p-2 rounded-lg hover:bg-slate-700">Hide Image</button>
+      <button id="show-image" class="w-1/6 bg-slate-500 text-white p-2 rounded-lg hover:bg-slate-700 hidden">Show Image</button>
+      <div id="receipt-container">
+        <canvas id="receipt" width="1" height="1" class="p-2 border border-slate-200 rounded-lg"></canvas>
+      </div>
+    </div>
+    <div id="form-container" class="p-4 mt-4 hidden"></div>
+    <button id="save-data" class="bg-green-500 text-white p-2 rounded-lg hover:bg-green-700 hidden">Save Data</button>
+  </div>
+
+  <script>
+    const canvas = new fabric.Canvas('receipt');
+    let currentBox = ''; // items or prices
+    let boxCounter = 0;
+
+    // display image
+    fabric.Image.fromURL(`/data/receipts/{{ receipt_name }}/receipt.{{ extension }}`, img => {
+      canvas.setWidth(img.width);
+      canvas.setHeight(img.height);
+      img.set({ selectable: false, evented: false });
+      canvas.add(img);
+      canvas.centerObject(img);
+      canvas.renderAll();
+    });
+
+    document.getElementById('add-items').addEventListener('click', () => {
+      currentBox = 'items';
+    });
+
+    document.getElementById('add-prices').addEventListener('click', () => {
+      currentBox = 'prices';
+    });
+
+    // actual drawing
+    let isDrawing = false;
+    let rect, origX, origY;
+
+    canvas.on('mouse:down', o => {
+      if (currentBox === '') return;
+      isDrawing = true;
+      const pointer = canvas.getPointer(o.e);
+      origX = pointer.x;
+      origY = pointer.y;
+      rect = new fabric.Rect({
+        left: origX,
+        top: origY,
+        fill: currentBox === 'items'? 'rgba(0,0,255,0.3)' : 'rgba(0,255,0,0.3)',
+        stroke: currentBox === 'items'? 'blue' : 'green',
+        strokeWidth: 2,
+        transparentCorners: false
+      });
+      canvas.add(rect);
+    });
+
+    canvas.on('mouse:move', o => {
+      if (!isDrawing) return;
+      
+      const pointer = canvas.getPointer(o.e);
+      
+      if (origX > pointer.x) {
+        rect.set({ left: Math.abs(pointer.x) });
+      }
+      
+      if (origY > pointer.y) {
+        rect.set({ top: Math.abs(pointer.y) });
+      }
+      
+      rect.set({ width: Math.abs(origX - pointer.x) });
+      rect.set({ height: Math.abs(origY - pointer.y) });
+      
+      canvas.renderAll();
+    });
+
+    canvas.on('mouse:up', () => {
+      isDrawing = false;
+
+      const cropId = `crop_${boxCounter++}`;
+      const croppedCanvas = document.createElement('canvas');
+      croppedCanvas.width = rect.width;
+      croppedCanvas.height = rect.height;
+
+      const ctx = croppedCanvas.getContext('2d');
+      ctx.drawImage(
+        canvas.getObjects('image')[0].getElement(), // Original image element
+        rect.left, // Source x
+        rect.top, // Source y
+        rect.width, // Source width
+        rect.height, // Source height
+        0, // Destination x
+        0, // Destination y
+        rect.width, // Destination width
+        rect.height // Destination height
+      );
+
+      const croppedImg = new Image();
+      croppedImg.src = croppedCanvas.toDataURL(`image/${{ extension }}`);
+      croppedImg.classList.add('border', 'rounded-lg');
+      croppedImg.classList.add(currentBox === 'items'? 'border-blue-500' : 'border-green-500');
+      croppedImg.id = cropId;
+
+      document.getElementById('cropped').appendChild(croppedImg);
+
+      currentBox = '';
+    });
+
+
+    // submitting rectangles
+    document.getElementById('submit').addEventListener('click', () => {
+
+      const rects = canvas.getObjects('rect').map((r, i) => {
+
+        const cropId = `crop_${i}`;
+        const croppedCanvas = document.getElementById(cropId);
+
+        return {
+          boxType: r.stroke === 'blue'? 'items' : 'prices',
+          b64Image: croppedCanvas.src,
+        };
+      });
+
+      fetch('/files/receipt', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          receipt_name: '{{ receipt_name }}',
+          boxes: rects
+        })
+      }).then(response => response.json())
+      .then(data => displayForm(data))
+      .catch(error => {
+        console.error('Error processing boxes:', error);
+      });
+
+    });
+
+  </script>
+
+  <script>
+    document.getElementById('hide-image').addEventListener('click', () => {
+      document.getElementById('receipt-container').classList.add('hidden');
+      document.getElementById('hide-image').classList.add('hidden');
+      document.getElementById('show-image').classList.remove('hidden');
+    });
+
+    document.getElementById('show-image').addEventListener('click', () => {
+      document.getElementById('receipt-container').classList.remove('hidden');
+      document.getElementById('hide-image').classList.remove('hidden');
+      document.getElementById('show-image').classList.add('hidden');
+    });
+  </script>
+
+  <script>
+
+    document.getElementById('save-data').addEventListener('click', () => {
+      const form = document.getElementById('receipt-form');
+      const formData = new FormData(form);
+
+      formData.append('receipt_name', '{{ receipt_name }}');
+      let count = 0;
+
+      for(let [key, value] of formData.entries()) {
+        if (key.startsWith('item_')) {
+          count++;
+        }
+      }
+
+      formData.append('count', count);
+
+      fetch('/files/receipt', {
+        method: 'PATCH',
+        body: formData
+      }).then(response => {
+        if (response.ok) {
+          console.log('Data saved successfully');
+          window.location.href = '/';
+        } else {
+          console.error('Data save failed');
+        }
+      }).catch(error => {
+        console.error('Error saving data:', error);
+      });
+    });
+
+  </script>
+
+
+{% endblock content %}
