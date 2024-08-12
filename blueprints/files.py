@@ -2,9 +2,10 @@ import os
 import base64
 import hashlib
 import pytesseract
-from io import BytesIO
 from PIL import Image
-from flask import Blueprint, request
+from io import BytesIO
+from pprint import pprint
+from flask import Blueprint, request, flash
 from flask import redirect, url_for, render_template, jsonify
 
 files_bp = Blueprint('files', __name__)
@@ -26,6 +27,7 @@ def upload_receipt():
   file = request.files['receipt']
   if file:
     name = hash_file_sha256(file)
+    print(name)
     ext = file.filename.split('.')[-1]
     # check if the file exists
     if os.path.exists(f'./data/receipts/{name}'):
@@ -34,11 +36,12 @@ def upload_receipt():
     os.mkdir(f'./data/receipts/{name}')
     file.stream.seek(0)
     file.save(f'./data/receipts/{name}/receipt.{ext}')
-    return redirect(url_for('files.process_receipt', receipt_name=name, extension=ext))
+    return redirect(url_for('files.process_receipt', receipt_name=name, extension=ext), code=303)
   return { 'message': 'No receipt found' }, 400
 
 @files_bp.route('/receipt', methods=['GET'])
 def process_receipt():
+  print(request.args)
   receipt_name = request.args.get('receipt_name')
   extension = request.args.get('extension')
   return render_template('process-receipt.html', receipt_name=receipt_name, extension=extension)
@@ -49,7 +52,7 @@ def process_boxes():
   receipt_name = data['receipt_name']
   boxes = data['boxes']
   
-  results = []
+  items, prices = [], []
   
   for i, box in enumerate(boxes):
     b64 = box['b64Image'].split(',')[1]
@@ -60,11 +63,21 @@ def process_boxes():
     cropped.save(cropped_path)
     
     text = pytesseract.image_to_string(cropped)
-    
-    results.append({
-      'boxType': box['boxType'],
-      'text': text,
-      'path': cropped_path
-    })
-  
+    print(box['boxType'], text, )
+    if box['boxType'] == 'items':
+      items += text.splitlines()
+    elif box['boxType'] == 'prices':
+      prices += text.splitlines()
+      
+  results = { 'items': items, 'prices': prices, 'count': max(len(items), len(prices)) }
   return jsonify(results), 200
+
+@files_bp.route('/receipt', methods=['PATCH'])
+def save_to_db():
+  data = request.form
+  pprint(data, indent=2)
+  
+  flash('Data received by server!') # doesnt work for some reason
+  
+  # save to db
+  return { 'message': 'Saved to DB' }, 200
