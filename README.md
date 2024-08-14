@@ -33,16 +33,18 @@ If you are on another machine, instructions will be up soon.
 2. Store receipt data in local db.
 
 ### Futures
+> In mostly this order
 
-- [ ] Add categorization to the transaction data
-- [ ] Draw more boxes on receipt for automatic data filling
-- [ ] Train tesseract to better read numbers (and text)
-- [ ] Chat with llama about past transactions
-- [ ] Upload card and bank statements
-- [ ] Improve UI
-- [ ] More informative graphs and other dashboard features
-- [ ] Personal server, ie, multi device
-- [ ] PWA for easy uploads
+- [ ] Make DB richer (with stuff like categorisation)
+- [ ] Create page(s) to explore data
+- [ ] Additional OCR capability for gathering other relevant data
+- [ ] Improve tesseract OCR using saved images (and tessdata)
+- [ ] Integrate llama3.1-8b to chat about transactions
+- [ ] Improve UI and add visualisations
+- [ ] Add support for PDF statements
+- [ ] Process files directly, straight after upload
+- [ ] Containerisation for cloud deployment
+- [ ] PWA for mobile devices to quickly upload receipts
 
 ## Contributing
 
